@@ -33,6 +33,6 @@ users can login using phone number and password
 - ID
 - Questions
 - Answers List
-- Correct Answer
+- Correct PlayerAnswer
 - Difficulty
 - Category
