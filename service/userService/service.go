@@ -16,8 +16,8 @@ type Service struct {
 }
 
 type RegisterRequest struct {
-	Name        string
-	PhoneNumber string
+	Name        string `json:"name"`
+	PhoneNumber string `json:"phone_number"`
 }
 
 type RegisterResponse struct {
@@ -32,7 +32,6 @@ func (s Service) Register(req RegisterRequest) (RegisterResponse, error) {
 	// TODO - phone number should be verified via sms
 	// validate phone number
 	if !phoneNumber.IsValid(req.PhoneNumber) {
-		fmt.Println("invalid phone number in service.register", req.PhoneNumber)
 		return RegisterResponse{}, fmt.Errorf("invalid phone number")
 	}
 
