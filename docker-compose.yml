@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  quizgame-database:
+    image: mysql:8.0
+    container_name: quizgame-database
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootquizgamepass
+      MYSQL_DATABASE: quizgame_db
+      MYSQL_USER: quizgame
+      MYSQL_PASSWORD: quizgamepass
+    ports:
+      - "3308:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
+volumes:
+  mysql_data:
