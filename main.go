@@ -11,9 +11,9 @@ import (
 )
 
 func main() {
-	//mux := http.NewServeMux()
 	http.HandleFunc("/health-check", healthCheckHandler)
 	http.HandleFunc("/users/register", userRegisterHandler)
+	http.HandleFunc("/users/login", userLoginHandler)
 
 	err := http.ListenAndServe("localhost:8080", nil)
 	if err != nil {
@@ -23,6 +23,37 @@ func main() {
 
 func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, `{"alive": true}`)
+}
+
+func userLoginHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		fmt.Fprint(w, `{"error": "only POST method is allowed"}`)
+		return
+	}
+	data, err := io.ReadAll(r.Body)
+	if err != nil {
+		fmt.Fprintf(w, `{"error_onread": "%s"}`, err.Error())
+		return
+	}
+
+	var req userService.LoginRequest
+	err = json.Unmarshal(data, &req)
+	if err != nil {
+		fmt.Fprintf(w, `{"error_unmarshal": "%s"}`, err.Error())
+		return
+	}
+
+	mysqlRepo := mysql.New()
+	userSvc := userService.New(mysqlRepo)
+
+	_, err = userSvc.Login(req)
+	if err != nil {
+		fmt.Fprintf(w, `{"error_login": "%s"}`, err.Error())
+		return
+	}
+
+	fmt.Fprint(w, `{"message": "user credentials are ok"`)
+
 }
 
 func userRegisterHandler(w http.ResponseWriter, r *http.Request) {
