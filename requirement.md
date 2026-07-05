@@ -22,6 +22,7 @@ users can login using phone number and password
 - Phone Number
 - Avatar
 - Name
+- Password
 
 ## Game
 - ID
