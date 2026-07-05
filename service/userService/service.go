@@ -6,13 +6,13 @@ import (
 	"quizGameGo/pkg/phoneNumber"
 )
 
-type Reposityory interface {
+type Repository interface {
 	IsPhoneNumberUnique(phoneNumber string) (bool, error)
 	Register(u entities.User) (entities.User, error)
 }
 
-type service struct {
-	repo Reposityory
+type Service struct {
+	repo Repository
 }
 
 type RegisterRequest struct {
@@ -24,10 +24,15 @@ type RegisterResponse struct {
 	User entities.User
 }
 
-func (s service) Register(req RegisterRequest) (RegisterResponse, error) {
+func New(repo Repository) Service {
+	return Service{repo: repo}
+}
+
+func (s Service) Register(req RegisterRequest) (RegisterResponse, error) {
 	// TODO - phone number should be verified via sms
 	// validate phone number
 	if !phoneNumber.IsValid(req.PhoneNumber) {
+		fmt.Println("invalid phone number in service.register", req.PhoneNumber)
 		return RegisterResponse{}, fmt.Errorf("invalid phone number")
 	}
 
