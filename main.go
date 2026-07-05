@@ -42,7 +42,6 @@ func userRegisterHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"error_unmarshal": "%s"}`, err.Error())
 		return
 	}
-	fmt.Println(req)
 
 	mysqlRepo := mysql.New()
 	userSvc := userService.New(mysqlRepo)
