@@ -10,15 +10,59 @@ import (
 	"quizGameGo/service/userService"
 )
 
+const (
+	jwtTestKey = "testkey"
+)
+
 func main() {
 	http.HandleFunc("/health-check", healthCheckHandler)
 	http.HandleFunc("/users/register", userRegisterHandler)
 	http.HandleFunc("/users/login", userLoginHandler)
+	http.HandleFunc("/users/profile", userProfileHandler)
 
 	err := http.ListenAndServe("localhost:8080", nil)
 	if err != nil {
 		panic(err)
 	}
+}
+
+// TODO - should get userid in a jwt
+// TODO - GET shouldn't send body
+func userProfileHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		fmt.Fprint(w, `{"error": "only Get method is allowed"}`)
+		return
+	}
+
+	req := userService.ProfileRequest{UserID: 0}
+
+	data, err := io.ReadAll(r.Body)
+	if err != nil {
+		fmt.Fprintf(w, `{"error_onread": "%s"}`, err.Error())
+		return
+	}
+
+	err = json.Unmarshal(data, &req)
+	if err != nil {
+		fmt.Fprintf(w, `{"error_unmarshal": "%s"}`, err.Error())
+		return
+	}
+
+	mysqlRepo := mysql.New()
+	userSvc := userService.New(mysqlRepo, jwtTestKey)
+
+	response, err := userSvc.Profile(req)
+	if err != nil {
+		fmt.Fprintf(w, `{"error_profile": "%s"}`, err.Error())
+		return
+	}
+
+	data, err = json.Marshal(response)
+	if err != nil {
+		fmt.Fprintf(w, `{"error_profile": "%s"}`, err.Error())
+	}
+
+	fmt.Fprintf(w, string(data))
 }
 
 func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
@@ -44,16 +88,21 @@ func userLoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	mysqlRepo := mysql.New()
-	userSvc := userService.New(mysqlRepo)
+	userSvc := userService.New(mysqlRepo, jwtTestKey)
 
-	_, err = userSvc.Login(req)
+	response, err := userSvc.Login(req)
 	if err != nil {
 		fmt.Fprintf(w, `{"error_login": "%s"}`, err.Error())
 		return
 	}
 
-	fmt.Fprint(w, `{"message": "user credentials are ok"`)
+	data, err = json.Marshal(response)
+	if err != nil {
+		fmt.Fprintf(w, `{"error_profile": "%s"}`, err.Error())
+		return
+	}
 
+	w.Write(data)
 }
 
 func userRegisterHandler(w http.ResponseWriter, r *http.Request) {
@@ -75,7 +124,7 @@ func userRegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	mysqlRepo := mysql.New()
-	userSvc := userService.New(mysqlRepo)
+	userSvc := userService.New(mysqlRepo, jwtTestKey)
 
 	_, err = userSvc.Register(req)
 	if err != nil {
@@ -87,7 +136,6 @@ func userRegisterHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func testUserCreationRepo() {
-	// TODO - failed user registration increments the id - fix it
 	mysqlRepo := mysql.New()
 
 	createdUser, err := mysqlRepo.Register(entities.User{

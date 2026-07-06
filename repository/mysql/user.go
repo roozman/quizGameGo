@@ -6,6 +6,8 @@ import (
 	"quizGameGo/entities"
 )
 
+// TODO - turn the row.scan into a separate standalone function to reduce code duplication
+
 func (d *MySQLDB) IsPhoneNumberUnique(phoneNumber string) (bool, error) {
 	user := entities.User{}
 	var createdAt []uint8
@@ -48,4 +50,20 @@ func (d *MySQLDB) GetUserByPhoneNumber(phoneNumber string) (entities.User, bool,
 		return entities.User{}, false, fmt.Errorf("cant scan query result: %w", err)
 	}
 	return user, true, nil
+}
+
+func (d *MySQLDB) GetUserByID(id uint) (entities.User, error) {
+	user := entities.User{}
+	var createdAt []uint8
+
+	row := d.db.QueryRow(`SELECT * from users where id = ?`, id)
+	err := row.Scan(&user.ID, &user.Name, &user.PhoneNumber, &user.Password, &createdAt)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return entities.User{}, fmt.Errorf("user not found")
+		}
+		return entities.User{}, fmt.Errorf("cant scan query result: %w", err)
+	}
+	return user, nil
 }

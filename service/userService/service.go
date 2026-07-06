@@ -4,18 +4,22 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	jwt "github.com/golang-jwt/jwt/v5"
 	"quizGameGo/entities"
 	"quizGameGo/pkg/phoneNumber"
+	"time"
 )
 
 type Repository interface {
 	IsPhoneNumberUnique(phoneNumber string) (bool, error)
 	Register(u entities.User) (entities.User, error)
 	GetUserByPhoneNumber(phoneNumber string) (entities.User, bool, error)
+	GetUserByID(userID uint) (entities.User, error)
 }
 
 type Service struct {
-	repo Repository
+	signKey string
+	repo    Repository
 }
 
 type RegisterRequest struct {
@@ -33,10 +37,22 @@ type LoginRequest struct {
 	Password    string `json:"password"`
 }
 
-type LoginResponse struct{}
+type LoginResponse struct {
+	AccessToken string `json:"access_token"`
+}
 
-func New(repo Repository) Service {
-	return Service{repo: repo}
+type ProfileRequest struct {
+	UserID uint
+}
+
+type ProfileResponse struct {
+	Name string `json:"name"`
+}
+
+// TODO - sanitize the inputs
+
+func New(repo Repository, signKey string) Service {
+	return Service{repo: repo, signKey: signKey}
 }
 
 func (s Service) Register(req RegisterRequest) (RegisterResponse, error) {
@@ -85,6 +101,7 @@ func (s Service) Register(req RegisterRequest) (RegisterResponse, error) {
 	}, nil
 }
 
+// TODO - switch to bcrypt
 func getMD5Hash(text string) string {
 	hash := md5.Sum([]byte(text))
 	return hex.EncodeToString(hash[:])
@@ -106,5 +123,37 @@ func (s Service) Login(req LoginRequest) (LoginResponse, error) {
 		return LoginResponse{}, fmt.Errorf("wrong phone number or password")
 	}
 
-	return LoginResponse{}, nil
+	token, err := createToken(user.ID, s.signKey)
+	if err != nil {
+		return LoginResponse{}, fmt.Errorf("unexpected error: %w", err)
+	}
+
+	return LoginResponse{AccessToken: token}, nil
+}
+
+func (s Service) Profile(req ProfileRequest) (ProfileResponse, error) {
+	user, err := s.repo.GetUserByID(req.UserID)
+	if err != nil {
+		// i am  expecting sanitized input, therefore it shouldnt return any errors
+		return ProfileResponse{}, fmt.Errorf("unexpected error %w", err)
+	}
+	return ProfileResponse{Name: user.Name}, nil
+}
+
+type Claims struct {
+	RegisteredClaims jwt.RegisteredClaims
+	UserID           uint `json:"userid"`
+}
+
+// creates a jwt token using HS256
+func createToken(userID uint, signKey string) (string, error) {
+	// TODO - replace with RS256 - https://github.com/golang-jwt/jwt/blob/main/http_example_test.go
+	t := jwt.New(jwt.SigningMethodHS256)
+
+	claims := t.Claims.(jwt.MapClaims)
+	claims["userid"] = userID
+	claims["exp"] = time.Now().Add(time.Hour * 24).Unix()
+	claims["iat"] = time.Now().Unix()
+
+	return t.SignedString([]byte(signKey))
 }

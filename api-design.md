@@ -1,6 +1,7 @@
 # User
-POST /users/register
-POST /users/login
+- POST /users/register
+- POST /users/login
+- GET /users/profile
 
 # Utility
-ANY /health-check
+- GET /health-check
