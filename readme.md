@@ -6,17 +6,25 @@ A simple backend service for a multiple-choice quiz game, built in Go. This proj
 
 ## Overview
 
-The service provides user authentication (registration and login) and will eventually handle game logic, including categories, difficulty levels, and scoring. Currently, it manages user accounts with phone numbers and passwords.
+The service supports user registration and login.
+
+Passwords are hashed with bcrypt.
+
+Successful login returns a JWT.
+
+Game logic will be added later.
 
 ---
 
 ## Features
 
-- **User Registration** – create an account with name, phone number, and password.
-- **User Login** – authenticate using phone number and password (MD5 hashed, to be improved).
-- **Health Check** – simple endpoint to verify service availability.
-- **Database** – MySQL containerized via Docker Compose.
-- **Modular architecture** – separates HTTP handlers, business logic (service layer), and data persistence (repository pattern).
+- **User Registration** – create an account with a name, phone number, and password.
+- **User Login** – authenticate with a phone number and password.
+- **Password Security** – hash passwords with bcrypt.
+- **JWT Authentication** – issue a token after successful login.
+- **Health Check** – verify service availability.
+- **Database** – run MySQL with Docker Compose.
+- **Modular Architecture** – separate handlers, services, and repositories.
 
 ---
 
