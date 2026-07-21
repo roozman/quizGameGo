@@ -1,13 +1,13 @@
 package userService
 
 import (
-	"crypto/md5"
-	"encoding/hex"
 	"fmt"
-	jwt "github.com/golang-jwt/jwt/v5"
 	"quizGameGo/entities"
 	"quizGameGo/pkg/phoneNumber"
 	"time"
+
+	jwt "github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Repository interface {
@@ -84,11 +84,16 @@ func (s Service) Register(req RegisterRequest) (RegisterResponse, error) {
 	}
 
 	// create new user
+	hashedPassword, err := hashPassword(req.Password)
+	if err != nil {
+		return RegisterResponse{}, fmt.Errorf("failed to hash password: %w", err)
+	}
+
 	user := entities.User{
 		ID:          0, //db handles id management
 		PhoneNumber: req.PhoneNumber,
 		Name:        req.Name,
-		Password:    getMD5Hash(req.Password),
+		Password:    hashedPassword,
 	}
 	createdUser, err := s.repo.Register(user)
 	if err != nil {
@@ -101,10 +106,20 @@ func (s Service) Register(req RegisterRequest) (RegisterResponse, error) {
 	}, nil
 }
 
-// TODO - switch to bcrypt
-func getMD5Hash(text string) string {
-	hash := md5.Sum([]byte(text))
-	return hex.EncodeToString(hash[:])
+// Hashing password using bcrypt
+func hashPassword(password string) (string, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+	return string(hash), nil
+}
+
+// Compares the stored and hashed password with the passed password
+// returns true if the passwords match, otherwise returns false
+func checkPasswordHash(password, storedHash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(password))
+	return err == nil
 }
 
 func (s Service) Login(req LoginRequest) (LoginResponse, error) {
@@ -119,7 +134,7 @@ func (s Service) Login(req LoginRequest) (LoginResponse, error) {
 	}
 
 	// compare the hashed passwords
-	if user.Password != getMD5Hash(req.Password) {
+	if !checkPasswordHash(req.Password, user.Password) {
 		return LoginResponse{}, fmt.Errorf("wrong phone number or password")
 	}
 
